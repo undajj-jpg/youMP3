@@ -1,0 +1,17 @@
+services:
+  yoump3:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+      FILE_TTL_HOURS: "24"
+      MAX_CONCURRENT: "2"
+      AUDIO_BITRATE: 192K
+      API_KEY: ${API_KEY:-}
+    volumes:
+      - mp3-data:/data
+    restart: unless-stopped
+
+volumes:
+  mp3-data:
