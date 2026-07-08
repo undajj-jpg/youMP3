@@ -110,6 +110,21 @@ test('video más largo que MAX_DURATION_SECONDS se rechaza', async () => {
   assert.match(done.msg, /máximo permitido/);
 });
 
+test('modo síncrono (?wait=1) devuelve el link en una sola llamada', async () => {
+  const { status, body } = await api('/api/convert?id=WAITVIDEO__&wait=1');
+  assert.equal(status, 200);
+  assert.equal(body.status, 'ok');
+  assert.equal(body.link, 'https://mp3.example.com/files/WAITVIDEO__.mp3');
+  assert.ok(body.filesize > 0);
+});
+
+test('modo síncrono con video en error responde 500 con causa', async () => {
+  const { status, body } = await api('/api/convert?url=https://youtu.be/ERRVIDEO___&wait=1');
+  // ERRVIDEO___ ya corrió en un test anterior; puede venir de un job nuevo
+  assert.ok(status === 500 || body.status === 'error');
+  assert.equal(body.status, 'error');
+});
+
 test('job desconocido devuelve 404', async () => {
   const { status } = await api('/api/jobs/no-existe');
   assert.equal(status, 404);

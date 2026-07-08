@@ -23,6 +23,15 @@ PUBLIC_BASE_URL=https://mp3.midominio.com docker compose up -d --build
 
 ## Uso
 
+### Modo de una sola llamada (sin polling)
+
+Añade `?wait=1` y la respuesta se retiene hasta que el MP3 está listo — el mismo contrato que la variante de Vercel, útil para que el sistema consumidor no implemente polling:
+
+```bash
+curl "http://localhost:3000/api/convert?url=https://youtu.be/dQw4w9WgXcQ&wait=1"
+# → { "status": "ok", ..., "link": "http://localhost:3000/files/dQw4w9WgXcQ.mp3" }
+```
+
 ### 1. Pedir la conversión
 
 ```bash

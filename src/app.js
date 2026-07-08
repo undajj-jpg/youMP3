@@ -62,9 +62,14 @@ export function createApp() {
    * Si el MP3 ya está en caché responde de inmediato con status "ok" y el link.
    * Si no, encola la conversión y responde "queued"/"processing" con un jobId
    * para hacer polling en GET /api/jobs/:jobId.
+   *
+   * Con ?wait=1 (o "url": ..., "wait": true en el body) la respuesta se
+   * retiene hasta que la conversión termina — mismo contrato de una sola
+   * llamada que la variante serverless de Vercel.
    */
   async function handleConvert(req, res) {
     const input = req.body?.url ?? req.query.url ?? req.query.id;
+    const wait = req.query.wait === '1' || req.query.wait === 'true' || req.body?.wait === true;
     const videoId = extractVideoId(input ?? '');
     if (!videoId) {
       return res.status(400).json({
@@ -75,28 +80,40 @@ export function createApp() {
 
     // Si hay una conversión en curso de este video, reutilizarla antes de mirar
     // la caché: durante el postprocesado el .mp3 puede existir a medias en disco.
-    const active = getActiveJob(videoId);
-    if (active) {
-      return res.status(202).json(jobResponse(req, active));
+    let job = getActiveJob(videoId);
+
+    if (!job) {
+      const cached = await getCached(videoId);
+      if (cached) {
+        return res.json({
+          status: 'ok',
+          id: videoId,
+          title: cached.title ?? null,
+          duration: cached.duration ?? null,
+          channel: cached.channel ?? null,
+          thumbnail: cached.thumbnail ?? null,
+          filesize: cached.filesize,
+          link: publicLink(req, videoId),
+          cached: true,
+        });
+      }
+      job = enqueue(videoId);
     }
 
-    const cached = await getCached(videoId);
-    if (cached) {
-      return res.json({
-        status: 'ok',
-        id: videoId,
-        title: cached.title ?? null,
-        duration: cached.duration ?? null,
-        channel: cached.channel ?? null,
-        thumbnail: cached.thumbnail ?? null,
-        filesize: cached.filesize,
-        link: publicLink(req, videoId),
-        cached: true,
-      });
+    if (!wait) {
+      return res.status(202).json(jobResponse(req, job));
     }
 
-    const job = enqueue(videoId);
-    res.status(202).json(jobResponse(req, job));
+    // Modo síncrono: esperar a que el job termine (hasta el timeout de
+    // conversión configurado) comprobando su estado periódicamente.
+    const deadline = Date.now() + config.ytdlpTimeoutMinutes * 60 * 1000 + 60_000;
+    while (job.status === 'queued' || job.status === 'processing') {
+      if (Date.now() > deadline) {
+        return res.status(504).json(jobResponse(req, job));
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    res.status(job.status === 'done' ? 200 : 500).json(jobResponse(req, job));
   }
 
   app.post('/api/convert', handleConvert);
