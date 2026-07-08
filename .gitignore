@@ -4,3 +4,5 @@ bin/
 .env
 .vercel/
 *.log
+.vercel
+.env*

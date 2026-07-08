@@ -97,6 +97,12 @@ Ver `.env.example`. Las más importantes:
 
 ## Despliegue en Vercel
 
+> Instancia desplegada: `https://yoump3-undajj-2087s-projects.vercel.app`
+>
+> ```bash
+> curl "https://yoump3-undajj-2087s-projects.vercel.app/api/convert?url=https://youtu.be/dQw4w9WgXcQ"
+> ```
+
 El repo incluye una segunda variante del servicio pensada para serverless (`api/convert.js`): convierte **sincrónicamente** dentro de la request (Fluid compute, hasta 300 s) y guarda el MP3 en **Vercel Blob**, cuyo `link` devuelto es una URL pública permanente — no hace falta el sistema de jobs ni el disco local.
 
 ```bash
