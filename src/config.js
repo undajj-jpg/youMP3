@@ -17,7 +17,11 @@ export const config = {
   maxConcurrent: parseInt(env('MAX_CONCURRENT', '2'), 10),
 
   // Duración máxima permitida del video (en segundos). 0 = sin límite.
-  maxDurationSeconds: parseInt(env('MAX_DURATION_SECONDS', '5400'), 10),
+  // Default: 9 horas.
+  maxDurationSeconds: parseInt(env('MAX_DURATION_SECONDS', '32400'), 10),
+
+  // Tiempo máximo de descarga+conversión de un video (en minutos).
+  ytdlpTimeoutMinutes: parseFloat(env('YTDLP_TIMEOUT_MINUTES', '90')),
 
   // Calidad del MP3 (bitrate). Ej: 128K, 192K, 320K.
   audioBitrate: env('AUDIO_BITRATE', '192K'),
@@ -30,4 +34,8 @@ export const config = {
 
   // Archivo de cookies para yt-dlp (opcional, ayuda contra bloqueos anti-bot).
   cookiesFile: env('YTDLP_COOKIES', ''),
+
+  // Ruta al generate_once.js de bgutil para generar PO Tokens en modo script
+  // (opcional; si el servidor bgutil corre en 127.0.0.1:4416 no hace falta).
+  bgutilScript: env('BGUTIL_SCRIPT', ''),
 };

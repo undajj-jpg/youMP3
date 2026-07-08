@@ -30,8 +30,15 @@ function runYtDlp(args, { timeoutMs = 10 * 60 * 1000 } = {}) {
 }
 
 function commonArgs(videoId) {
-  const args = ['--no-playlist', '--no-warnings'];
+  // --js-runtimes node: yt-dlp necesita un runtime JS para firmar URLs.
+  // El plugin bgutil (instalado vía pip en la imagen Docker) genera los PO
+  // Tokens que YouTube exige desde IPs de datacenter; detecta solo su
+  // servidor HTTP en 127.0.0.1:4416 (ver Dockerfile/entrypoint).
+  const args = ['--no-playlist', '--no-warnings', '--js-runtimes', 'node'];
   if (config.cookiesFile) args.push('--cookies', config.cookiesFile);
+  if (config.bgutilScript) {
+    args.push('--extractor-args', `youtubepot-bgutilscript:script_path=${config.bgutilScript}`);
+  }
   args.push(`https://www.youtube.com/watch?v=${videoId}`);
   return args;
 }
@@ -51,6 +58,7 @@ export async function fetchMetadata(videoId) {
 
 /** Descarga el audio y lo convierte a MP3 en outPath (sin extensión .mp3 final duplicada). */
 export async function downloadMp3(videoId, outPathTemplate) {
+  const timeoutMs = config.ytdlpTimeoutMinutes * 60 * 1000;
   await runYtDlp([
     '-x',
     '--audio-format', 'mp3',
@@ -59,5 +67,5 @@ export async function downloadMp3(videoId, outPathTemplate) {
     '--add-metadata',
     '-o', outPathTemplate,
     ...commonArgs(videoId),
-  ]);
+  ], { timeoutMs });
 }
