@@ -29,6 +29,11 @@ export function getJob(jobId) {
   return jobs.get(jobId) ?? null;
 }
 
+/** Job activo (en cola o procesando) para un video, si existe. */
+export function getActiveJob(videoId) {
+  return jobByVideo.get(videoId) ?? null;
+}
+
 /** Devuelve los metadatos cacheados si el MP3 ya existe y sigue vigente. */
 export async function getCached(videoId) {
   try {
@@ -71,14 +76,14 @@ function pump() {
   while (running < config.maxConcurrent && queue.length > 0) {
     const job = queue.shift();
     running++;
-    process(job).finally(() => {
+    runJob(job).finally(() => {
       running--;
       pump();
     });
   }
 }
 
-async function process(job) {
+async function runJob(job) {
   job.status = 'processing';
   try {
     const meta = await fetchMetadata(job.videoId);

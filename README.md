@@ -95,6 +95,14 @@ Ver `.env.example`. Las más importantes:
 - `API_KEY` — si se define, `/api/*` exige el header `x-api-key`.
 - `YTDLP_COOKIES` — ruta a un `cookies.txt`; útil si YouTube aplica verificación anti-bot a la IP del servidor.
 
+## Tests
+
+```bash
+npm test
+```
+
+Corre la suite con el runner nativo de Node: tests unitarios del parser de URLs y tests de integración de la API completa (encolar → poll → descargar → caché → errores) usando un `yt-dlp` simulado, así que no necesitan red. El workflow de CI (`.github/workflows/ci.yml`) los ejecuta en cada push y además construye la imagen Docker.
+
 ## Notas de operación
 
 - **Caché**: los MP3 se guardan como `<videoId>.mp3` junto a un `<videoId>.json` con metadatos, así la caché sobrevive reinicios.
