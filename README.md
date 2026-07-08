@@ -95,6 +95,36 @@ Ver `.env.example`. Las más importantes:
 - `API_KEY` — si se define, `/api/*` exige el header `x-api-key`.
 - `YTDLP_COOKIES` — ruta a un `cookies.txt`; útil si YouTube aplica verificación anti-bot a la IP del servidor.
 
+## Despliegue en Vercel
+
+El repo incluye una segunda variante del servicio pensada para serverless (`api/convert.js`): convierte **sincrónicamente** dentro de la request (Fluid compute, hasta 300 s) y guarda el MP3 en **Vercel Blob**, cuyo `link` devuelto es una URL pública permanente — no hace falta el sistema de jobs ni el disco local.
+
+```bash
+npm i -g vercel
+vercel login
+vercel link          # crea/asocia el proyecto
+vercel blob store add yoump3-storage   # crea el Blob store y conecta BLOB_READ_WRITE_TOKEN
+vercel deploy --prod
+```
+
+En el build, `vercel-build` (script `scripts/fetch-binaries.mjs`) descarga `yt-dlp` y un `ffmpeg` estático a `bin/`, que se empaquetan con la función (`includeFiles` en `vercel.json`).
+
+Uso (síncrono, sin polling):
+
+```bash
+curl "https://<tu-proyecto>.vercel.app/api/convert?url=https://youtu.be/dQw4w9WgXcQ"
+# → { "status": "ok", "title": "...", "link": "https://<store>.public.blob.vercel-storage.com/mp3/dQw4w9WgXcQ.mp3" }
+```
+
+Variables de entorno soportadas en Vercel: `API_KEY`, `MAX_DURATION_SECONDS`, `AUDIO_BITRATE` y `YTDLP_COOKIES_B64` (un `cookies.txt` en base64, para sortear la verificación anti-bot de YouTube desde IPs de datacenter — en Vercel es probable que la necesites).
+
+Para probar el handler serverless en local sin desplegar:
+
+```bash
+node --experimental-test-module-mocks scripts/vercel-local.mjs
+curl "http://localhost:3333/api/convert?id=dQw4w9WgXcQ"
+```
+
 ## Tests
 
 ```bash

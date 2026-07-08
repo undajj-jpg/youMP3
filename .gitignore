@@ -1,4 +1,6 @@
 node_modules/
 storage/
+bin/
 .env
+.vercel/
 *.log
