@@ -143,6 +143,22 @@ npm test
 
 Corre la suite con el runner nativo de Node: tests unitarios del parser de URLs y tests de integración de la API completa (encolar → poll → descargar → caché → errores) usando un `yt-dlp` simulado, así que no necesitan red. El workflow de CI (`.github/workflows/ci.yml`) los ejecuta en cada push y además construye la imagen Docker.
 
+## Videos largos (hasta 9 horas) y bloqueos de YouTube
+
+El límite por defecto es `MAX_DURATION_SECONDS=32400` (9 h). Dónde puede convertirse cada duración:
+
+| Escenario | Límite práctico | Nota |
+|---|---|---|
+| **Autohospedado (Docker)** | 9 h+ | Conversión asíncrona en segundo plano con polling; es la vía recomendada para videos de horas. `YTDLP_TIMEOUT_MINUTES` (default 90) acota cada conversión. |
+| **Vercel Hobby** | ~3 h (`SYNC_MAX_SECONDS=10800`) | La función vive máx. 300 s; videos que no caben se rechazan con 422 y mensaje claro. |
+| **Vercel Pro** | ~9 h | Sube `maxDuration` a 800 en `vercel.json` y `SYNC_MAX_SECONDS=32400`. |
+
+**PO Tokens / bot-check**: YouTube exige "PO Tokens" y verificación anti-bot a las IPs de datacenter. Este proyecto integra [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) (estándar de la comunidad yt-dlp) en ambas variantes: la imagen Docker corre su servidor local automáticamente y la función de Vercel empaqueta el generador en modo script. Aun así, **en IPs muy marcadas (p. ej. las compartidas de Vercel) YouTube puede bloquear a nivel del player API**, donde los tokens no bastan; en ese caso la API devuelve `503 YOUTUBE_BOT_CHECK` y las opciones son:
+
+1. `YTDLP_COOKIES_B64` — cookies de una sesión de YouTube exportadas del navegador, en base64 (`base64 -w0 cookies.txt`). Lo más efectivo.
+2. `YTDLP_PROXY` — enrutar yt-dlp por un proxy con IP limpia (p. ej. residencial).
+3. Autohospedar con Docker en un servidor cuya IP no esté marcada (VPS pequeño suele bastar).
+
 ## Notas de operación
 
 - **Caché**: los MP3 se guardan como `<videoId>.mp3` junto a un `<videoId>.json` con metadatos, así la caché sobrevive reinicios.

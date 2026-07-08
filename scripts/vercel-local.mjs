@@ -32,7 +32,12 @@ mock.module('@vercel/blob', {
     },
     async put(pathname, data) {
       const f = path.join(OUT_DIR, path.basename(pathname));
-      fs.writeFileSync(f, data);
+      if (typeof data?.pipe === 'function') {
+        const { pipeline } = await import('node:stream/promises');
+        await pipeline(data, fs.createWriteStream(f));
+      } else {
+        fs.writeFileSync(f, data);
+      }
       return { url: `https://fake.blob.vercel-storage.com/${pathname}` };
     },
     async del(urls) {

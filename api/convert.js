@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { list, put } from '@vercel/blob';
+import * as tar from 'tar';
 import { extractVideoId } from '../src/videoId.js';
 
 const YTDLP = process.env.YTDLP_BIN || path.join(process.cwd(), 'bin', 'yt-dlp');
@@ -60,18 +61,42 @@ async function cookiesArgs() {
 }
 
 /**
+ * Localiza el script generador de PO Tokens de bgutil. En Vercel el runtime
+ * del provider viaja como tarball (node_modules no sobrevive includeFiles) y
+ * se extrae a /tmp en el primer uso; en local/Docker se usa directo.
+ */
+async function bgutilScriptPath() {
+  const local = path.join(BGUTIL_DIR, 'server', 'build', 'generate_once.js');
+  if (fs.existsSync(path.join(BGUTIL_DIR, 'server', 'node_modules'))) return local;
+
+  const extracted = '/tmp/bgutil-server';
+  const script = path.join(extracted, 'build', 'generate_once.js');
+  if (fs.existsSync(script)) return script;
+  const tarball = path.join(BGUTIL_DIR, 'server-bundle.tar.gz');
+  if (!fs.existsSync(tarball)) return null;
+  fs.mkdirSync(extracted, { recursive: true });
+  await tar.x({ file: tarball, cwd: extracted });
+  return fs.existsSync(script) ? script : null;
+}
+
+/**
  * Flags comunes de yt-dlp: runtime JS (firma de URLs) y plugin bgutil que
  * genera los PO Tokens que YouTube exige desde IPs de datacenter.
  */
-function baseArgs() {
+async function baseArgs() {
   const args = [
     '--no-playlist', '--no-warnings', '--js-runtimes', 'node',
     '--cache-dir', '/tmp/yt-dlp-cache',
   ];
-  const script = path.join(BGUTIL_DIR, 'server', 'build', 'generate_once.js');
-  if (fs.existsSync(script)) {
+  // Proxy de salida para yt-dlp (ej. proxy residencial) — remedio principal
+  // cuando YouTube bloquea la IP del datacenter.
+  if (process.env.YTDLP_PROXY) args.push('--proxy', process.env.YTDLP_PROXY);
+  const script = await bgutilScriptPath();
+  if (script) {
     args.push(
-      '--plugin-dirs', path.join(BGUTIL_DIR, 'plugin'),
+      // --plugin-dirs espera el dir cuyos hijos son paquetes de plugins
+      // (<dir>/plugin/yt_dlp_plugins/...)
+      '--plugin-dirs', BGUTIL_DIR,
       '--extractor-args', `youtubepot-bgutilscript:script_path=${script}`,
     );
   }
@@ -114,11 +139,12 @@ export default async function handler(req, res) {
 
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     const cookies = await cookiesArgs();
+    const common = await baseArgs();
 
     // Metadatos primero: falla rápido y con causa clara si el video no es
     // convertible, en vez de agotar la ventana de la función.
     const rawInfo = await runYtDlp(
-      ['-J', ...baseArgs(), ...cookies, url],
+      ['-J', ...common, ...cookies, url],
       90_000,
       { captureStdout: true },
     );
@@ -152,7 +178,7 @@ export default async function handler(req, res) {
       '--audio-format', 'mp3',
       '--audio-quality', BITRATE,
       '--ffmpeg-location', FFMPEG,
-      ...baseArgs(),
+      ...common,
       ...cookies,
       '-o', `/tmp/${videoId}.%(ext)s`,
       url,
@@ -179,6 +205,16 @@ export default async function handler(req, res) {
       link: blob.url,
     });
   } catch (err) {
+    // Bot-check de YouTube: la IP de salida está marcada. Devolver un error
+    // accionable en lugar del texto crudo de yt-dlp.
+    if (/Sign in to confirm/i.test(err.message)) {
+      return res.status(503).json({
+        status: 'error',
+        id: videoId,
+        code: 'YOUTUBE_BOT_CHECK',
+        msg: 'YouTube exige verificación desde esta IP. Configura YTDLP_COOKIES_B64 (cookies de una sesión de YouTube en base64) o YTDLP_PROXY (proxy con IP limpia), o usa la instancia autohospedada.',
+      });
+    }
     return res.status(500).json({ status: 'error', id: videoId, msg: err.message });
   }
 }

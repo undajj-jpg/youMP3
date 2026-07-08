@@ -35,6 +35,9 @@ export const config = {
   // Archivo de cookies para yt-dlp (opcional, ayuda contra bloqueos anti-bot).
   cookiesFile: env('YTDLP_COOKIES', ''),
 
+  // Proxy de salida para yt-dlp (opcional, ej. proxy residencial).
+  proxy: env('YTDLP_PROXY', ''),
+
   // Ruta al generate_once.js de bgutil para generar PO Tokens en modo script
   // (opcional; si el servidor bgutil corre en 127.0.0.1:4416 no hace falta).
   bgutilScript: env('BGUTIL_SCRIPT', ''),

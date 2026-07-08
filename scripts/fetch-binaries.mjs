@@ -69,7 +69,10 @@ if (present(ffmpeg, 10_000_000)) {
 
 // --- bgutil PO token provider ---
 const bgutil = path.join(BIN, 'bgutil');
-if (present(path.join(bgutil, 'server', 'build', 'generate_once.js'), 1_000)) {
+if (
+  present(path.join(bgutil, 'server', 'build', 'generate_once.js'), 1_000) &&
+  present(path.join(bgutil, 'server-bundle.tar.gz'), 1_000_000)
+) {
   console.log('bgutil ya existe, omitiendo');
 } else {
   const tarball = path.join(BIN, 'bgutil.tar.gz');
@@ -98,5 +101,13 @@ if (present(path.join(bgutil, 'server', 'build', 'generate_once.js'), 1_000)) {
     process.exit(1);
   }
   run('npm', ['prune', '--omit=dev', '--ignore-scripts']);
-  console.log('bgutil listo (plugin + script de PO tokens)');
+
+  // Vercel excluye node_modules de includeFiles, así que el runtime del
+  // provider viaja como tarball y la función lo extrae a /tmp al arrancar.
+  execFileSync('tar', [
+    '-czf', path.join(bgutil, 'server-bundle.tar.gz'),
+    '-C', server,
+    'build', 'node_modules', 'package.json',
+  ]);
+  console.log('bgutil listo (plugin + script de PO tokens + server-bundle.tar.gz)');
 }

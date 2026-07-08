@@ -36,6 +36,7 @@ function commonArgs(videoId) {
   // servidor HTTP en 127.0.0.1:4416 (ver Dockerfile/entrypoint).
   const args = ['--no-playlist', '--no-warnings', '--js-runtimes', 'node'];
   if (config.cookiesFile) args.push('--cookies', config.cookiesFile);
+  if (config.proxy) args.push('--proxy', config.proxy);
   if (config.bgutilScript) {
     args.push('--extractor-args', `youtubepot-bgutilscript:script_path=${config.bgutilScript}`);
   }
