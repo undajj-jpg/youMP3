@@ -124,6 +124,10 @@ curl "https://<tu-proyecto>.vercel.app/api/convert?url=https://youtu.be/dQw4w9Wg
 
 Variables de entorno soportadas en Vercel: `API_KEY`, `MAX_DURATION_SECONDS`, `AUDIO_BITRATE` y `YTDLP_COOKIES_B64` (un `cookies.txt` en base64, para sortear la verificación anti-bot de YouTube desde IPs de datacenter — en Vercel es probable que la necesites).
 
+**Limpieza automática**: un cron diario de Vercel (`vercel.json`) invoca `/api/cleanup`, que borra del Blob store los MP3 con más de `BLOB_TTL_DAYS` días (default 30; `0` desactiva el borrado). Define `CRON_SECRET` en el proyecto si quieres que solo el cron pueda invocarlo.
+
+La raíz del despliegue (`/`) sirve una página con la documentación de la API (`public/index.html`).
+
 Para probar el handler serverless en local sin desplegar:
 
 ```bash

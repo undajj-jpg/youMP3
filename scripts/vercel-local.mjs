@@ -13,26 +13,38 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 mock.module('@vercel/blob', {
   namedExports: {
     async list({ prefix }) {
-      const f = path.join(OUT_DIR, path.basename(prefix));
-      if (fs.existsSync(f)) {
-        return {
-          blobs: [{
-            url: `https://fake.blob.vercel-storage.com/${prefix}`,
-            size: fs.statSync(f).size,
-          }],
-        };
-      }
-      return { blobs: [] };
+      // Prefijo exacto de archivo (caché de convert) o de carpeta (cleanup)
+      const names = prefix.endsWith('.mp3')
+        ? [path.basename(prefix)].filter((n) => fs.existsSync(path.join(OUT_DIR, n)))
+        : fs.readdirSync(OUT_DIR);
+      return {
+        cursor: undefined,
+        blobs: names.map((n) => {
+          const stat = fs.statSync(path.join(OUT_DIR, n));
+          return {
+            url: `https://fake.blob.vercel-storage.com/mp3/${n}`,
+            pathname: `mp3/${n}`,
+            size: stat.size,
+            uploadedAt: stat.mtime.toISOString(),
+          };
+        }),
+      };
     },
     async put(pathname, data) {
       const f = path.join(OUT_DIR, path.basename(pathname));
       fs.writeFileSync(f, data);
       return { url: `https://fake.blob.vercel-storage.com/${pathname}` };
     },
+    async del(urls) {
+      for (const u of [].concat(urls)) {
+        fs.rmSync(path.join(OUT_DIR, path.basename(u)), { force: true });
+      }
+    },
   },
 });
 
-const { default: handler } = await import('../api/convert.js');
+const { default: convert } = await import('../api/convert.js');
+const { default: cleanup } = await import('../api/cleanup.js');
 
 http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
@@ -53,6 +65,7 @@ http.createServer((req, res) => {
         res.end(JSON.stringify(obj));
       },
     };
+    const handler = url.pathname === '/api/cleanup' ? cleanup : convert;
     Promise.resolve(handler(vreq, vres)).catch((e) => {
       res.writeHead(500);
       res.end(String(e));

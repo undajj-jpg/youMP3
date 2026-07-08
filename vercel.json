@@ -5,5 +5,8 @@
       "maxDuration": 300,
       "includeFiles": "bin/**"
     }
-  }
+  },
+  "crons": [
+    { "path": "/api/cleanup", "schedule": "17 4 * * *" }
+  ]
 }

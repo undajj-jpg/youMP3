@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>youMP3 · YouTube → MP3 API</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2rem 1rem 4rem;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    line-height: 1.6; max-width: 46rem; margin-inline: auto;
+    background: #fafafa; color: #1a1a1a;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #111; color: #e8e8e8; }
+    pre, code { background: #1d1d1f !important; }
+    .card { background: #191919 !important; border-color: #2a2a2a !important; }
+  }
+  h1 { font-size: 1.7rem; margin-bottom: .2rem; }
+  h1 .accent { color: #e02020; }
+  .sub { opacity: .7; margin-top: 0; }
+  h2 { font-size: 1.1rem; margin-top: 2.2rem; }
+  pre {
+    background: #f0f0f0; padding: .9rem 1rem; border-radius: 8px;
+    overflow-x: auto; font-size: .85rem;
+  }
+  code { background: #f0f0f0; padding: .1rem .35rem; border-radius: 4px; font-size: .9em; }
+  pre code { padding: 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  td, th { padding: .45rem .6rem; text-align: left; border-bottom: 1px solid rgba(128,128,128,.25); }
+  .card {
+    background: #fff; border: 1px solid #e5e5e5; border-radius: 10px;
+    padding: 1rem 1.2rem; margin-top: 1rem;
+  }
+  .note { font-size: .85rem; opacity: .75; }
+</style>
+</head>
+<body>
+<h1>you<span class="accent">MP3</span></h1>
+<p class="sub">API de conversión YouTube → MP3 con URL pública de descarga</p>
+
+<h2>Convertir un video</h2>
+<div class="card">
+<pre><code>GET /api/convert?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ
+POST /api/convert   {"url": "https://youtu.be/dQw4w9WgXcQ"}</code></pre>
+<p>La conversión es <strong>síncrona</strong>: la respuesta llega cuando el MP3 está listo (segundos para un video típico; hasta 5 minutos para videos largos).</p>
+<pre><code>{
+  "status": "ok",
+  "id": "dQw4w9WgXcQ",
+  "title": "Rick Astley - Never Gonna Give You Up",
+  "duration": 213,
+  "filesize": 5114348,
+  "link": "https://…public.blob.vercel-storage.com/mp3/dQw4w9WgXcQ.mp3"
+}</code></pre>
+<p>El <code>link</code> es una URL pública permanente. Si el video ya fue convertido, la respuesta es inmediata e incluye <code>"cached": true</code>.</p>
+</div>
+
+<h2>Otros endpoints</h2>
+<table>
+  <tr><th>Ruta</th><th>Descripción</th></tr>
+  <tr><td><code>GET /api/health</code></td><td>Healthcheck</td></tr>
+  <tr><td><code>GET /api/convert?id=&lt;videoId&gt;</code></td><td>Igual que <code>url=</code>, con el ID de 11 caracteres</td></tr>
+</table>
+
+<h2>Errores</h2>
+<table>
+  <tr><th>Código</th><th>Causa</th></tr>
+  <tr><td><code>400</code></td><td>URL o ID de YouTube inválido</td></tr>
+  <tr><td><code>401</code></td><td>Falta el header <code>x-api-key</code> (solo si la instancia define <code>API_KEY</code>)</td></tr>
+  <tr><td><code>422</code></td><td>El video supera la duración máxima permitida</td></tr>
+  <tr><td><code>500</code></td><td>Fallo de descarga/conversión (el campo <code>msg</code> trae la causa)</td></tr>
+</table>
+
+<p class="note">Usa esta API únicamente con contenido que tengas derecho a descargar. Código fuente y despliegue autohospedado: repositorio <code>youMP3</code>.</p>
+</body>
+</html>
