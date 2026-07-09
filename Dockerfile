@@ -4,7 +4,7 @@ FROM node:22-slim
 # YouTube generando los PO Tokens que exige desde IPs de datacenter.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg python3 python3-pip curl ca-certificates \
-    && pip3 install --no-cache-dir --break-system-packages yt-dlp bgutil-ytdlp-pot-provider \
+    && pip3 install --no-cache-dir --break-system-packages "yt-dlp[default]" yt-dlp-ejs bgutil-ytdlp-pot-provider \
     && rm -rf /var/lib/apt/lists/*
 
 # Servidor bgutil (genera los PO Tokens); versión pineada
